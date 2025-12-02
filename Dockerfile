@@ -3,6 +3,9 @@
 # ---------------------------
 FROM node:20-alpine AS builder
 
+# Empêche Next.js de dépasser 512 Mo → évite les freezes sur t3.micro
+ENV NODE_OPTIONS="--max-old-space-size=512"
+
 # Crée le répertoire de travail
 WORKDIR /app
 
