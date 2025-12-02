@@ -24,4 +24,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/nextjs-frontend:latest
+          tags: ${{ secrets.DOCKER_USERNAME }}/frontend:latest
