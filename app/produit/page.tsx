@@ -10,7 +10,7 @@ export default function OMPayButton() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            amount: 10, // montant fixe
+            amount: 1, // montant fixe
             phone: "7701900014", // SANDBOX
           }),
         }

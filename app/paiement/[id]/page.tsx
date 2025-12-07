@@ -48,6 +48,7 @@ interface Paiement {
 
 interface ClientPaiement {
   client: ClientInfo;
+  telephone?: string;
   date_achat: string;
   produits: Produit[];
   paiements?: Paiement[];
@@ -212,41 +213,83 @@ export default function DetailClientPage() {
   };
 
   // 🔹 Gérer le paiement
+  // const handlePaiement = async () => {
+  //   if (!clientId) return toast.error("Client invalide.");
+
+  //   const montantNumber = parseFloat(montant);
+  //   if (!montantNumber || montantNumber < 10)
+  //     return toast.error("Montant invalide (min 100 000 Ar).");
+
+  //   try {
+  //     setIsPaying(true);
+
+  //     const res = await fetch(
+  //       `${process.env.NEXT_PUBLIC_BACKEND_URL}/paiement/api/payment/init/`,
+  //       {
+  //         method: "POST",
+  //         headers: { "Content-Type": "application/json" },
+  //         body: JSON.stringify({
+  //           client: clientId,
+  //           Paiement_montant: montantNumber.toFixed(0),
+  //           Paiement_mode: modePaiement,
+  //           Paiement_type: "mensuel",
+  //         }),
+  //       }
+  //     );
+
+  //     if (!res.ok) return toast.error("Erreur lors du paiement.");
+
+  //     toast.success("Paiement effectué ✅");
+
+  //     setShowPaiementModal(false);
+  //     setMontant("");
+
+  //     await fetchClientData(clientId); // 🔄 MAJ dans le state
+  //     router.refresh(); // ♻️ Force re-render affichage
+  //   } catch (error) {
+  //     toast.error("Erreur réseau");
+  //   } finally {
+  //     setIsPaying(false);
+  //   }
+  // };
   const handlePaiement = async () => {
     if (!clientId) return toast.error("Client invalide.");
 
     const montantNumber = parseFloat(montant);
-    if (!montantNumber || montantNumber < 10)
+    if (!montantNumber || montantNumber < 100000)
       return toast.error("Montant invalide (min 100 000 Ar).");
+
+    if (modePaiement !== "Orange")
+      return toast.error("Pour l'instant seul Orange Money est supporté.");
 
     try {
       setIsPaying(true);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/paiement/repaiement`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/paiement/api/payment/init/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            amount: montantNumber.toFixed(0),
+            phone: client?.telephone, // ⚠️ IMPORTANT pour Orange Money
             client: clientId,
-            Paiement_montant: montantNumber.toFixed(0),
-            Paiement_mode: modePaiement,
-            Paiement_type: "mensuel",
           }),
         }
       );
 
-      if (!res.ok) return toast.error("Erreur lors du paiement.");
+      const data = await res.json();
 
-      toast.success("Paiement effectué ✅");
+      if (!data.payment_url) {
+        setIsPaying(false);
+        return toast.error("Erreur API Orange Money.");
+      }
 
-      setShowPaiementModal(false);
-      setMontant("");
-
-      await fetchClientData(clientId); // 🔄 MAJ dans le state
-      router.refresh(); // ♻️ Force re-render affichage
+      // 🟩 Redirection vers l'interface officielle OM WebPay
+      window.location.href = data.payment_url;
     } catch (error) {
-      toast.error("Erreur réseau");
+      console.log(error);
+      toast.error("Erreur réseau.");
     } finally {
       setIsPaying(false);
     }
