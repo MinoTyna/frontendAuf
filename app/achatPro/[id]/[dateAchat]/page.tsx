@@ -309,12 +309,12 @@ export default function DetailClientPage() {
     );
   }
 
+  // ==================== handleUpdatePaiement ====================
   const handleUpdatePaiement = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dernierPaiementId) return toast.error("Aucun paiement à modifier.");
     if (!clientId) return toast.error("Client introuvable.");
     if (!dateChoisie) return toast.error("Veuillez choisir une nouvelle date.");
-    if (!montantPaye) return toast.error("Veuillez entrer un montant.");
 
     try {
       const res = await fetch(
@@ -328,7 +328,6 @@ export default function DetailClientPage() {
             client: clientId,
             Paiement_type: "mensuel",
             Paiement_datechoisi: dateChoisie,
-            Paiement_montant: parseInt(montantPaye, 10),
           }),
           cache: "no-store",
         }
@@ -336,22 +335,28 @@ export default function DetailClientPage() {
 
       if (!res.ok) {
         const errText = await res.text();
-        toast.error("Erreur lors de la modification");
+        toast.error("Erreur lors de la mise à jour");
         console.error(errText);
         return;
       }
+
       const data = await res.json();
-      toast.success("Paiement modifié avec succès");
 
-      // 🔄 Redirige vers la facture mise à jour
+      // 🔄 Refetch du client depuis le backend
+      const clientRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/${clientId}`
+      );
+      const clientData = await clientRes.json();
+      setClient(clientData);
 
+      toast.success("Date de paiement mise à jour avec succès !");
       setShowUpdateModal(false);
-      await fetchClientData(clientId, dateAchat);
     } catch (error) {
-      toast.error("Erreur réseau");
+      toast.error("Erreur réseau lors de la mise à jour");
       console.error("Erreur update :", error);
     }
   };
+
   const achatId = Number(id);
   const EnvoyerSms = async (AchatsID: number) => {
     try {
@@ -652,18 +657,6 @@ export default function DetailClientPage() {
         <div className="fixed inset-0 bg-black/50 bg-opacity-40 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-md w-[90%] max-w-md">
             <form onSubmit={handleUpdatePaiement} className="space-y-4">
-              {/* Montant payé */}
-              <div>
-                <label className="block font-medium mb-1">Montant payé</label>
-                <input
-                  type="number"
-                  className="w-full border px-3 py-2 rounded border-accent bg-gray-200"
-                  value={montantPaye}
-                  onChange={(e) => setMontantPaye(e.target.value)}
-                  required
-                />
-              </div>
-
               {/* Date choisie */}
               <div>
                 <label className="block font-medium mb-1">

@@ -1,105 +1,99 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @next/next/no-img-element */
+/* eslint-disable @next/next/no-html-link-for-pages */
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import toast from "react-hot-toast";
 
-import { EnvelopeIcon, LockClosedIcon } from "@heroicons/react/24/outline";
+import { useState, useEffect, useRef } from "react";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
-export default function SignIn() {
-  const router = useRouter();
+export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [step, setStep] = useState<"login" | "otp">("login");
+  const [message, setMessage] = useState<{
+    text: string;
+    type: "error" | "success";
+  } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [formData, setFormData] = useState({
-    email: "", // Email Responsable ou Nom Client
-    password: "",
-  });
+  const otpInputRef = useRef<HTMLInputElement>(null);
 
-  const [error, setError] = useState("");
+  // Focus OTP input when step changes
+  useEffect(() => {
+    if (step === "otp" && otpInputRef.current) {
+      otpInputRef.current.focus();
+    }
+  }, [step]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+  const handleLogin = async () => {
+    setMessage(null);
     setIsLoading(true);
 
     try {
-      // Déterminer si c'est Responsable (email) ou Client (nom)
-      const isEmail = formData.email.includes("@");
-
-      const url = isEmail
-        ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/responsable/connexion`
-        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/connexion`;
-
-      const body = isEmail
-        ? { Responsable_email: formData.email, password: formData.password }
-        : { Client_nom: formData.email, password: formData.password };
-
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/responsable/connexion`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Identifiants invalides");
-        setIsLoading(false);
+        setMessage({ text: data.error || "Erreur inconnue", type: "error" });
         return;
       }
 
-      if (!data.user) {
-        setError("Impossible de récupérer les informations de l'utilisateur");
-        setIsLoading(false);
-        return;
-      }
-
-      // Stockage token
-      localStorage.setItem("token", data.token);
-
-      if (!isEmail) {
-        // === Client ===
-        localStorage.setItem("Client_role", data.user.Client_role || "client");
-        localStorage.setItem("clientId", data.user.id.toString());
-        localStorage.setItem("Client_nom", data.user.Client_nom || "");
-        localStorage.setItem("Client_prenom", data.user.Client_prenom || "");
-        toast.success("Connexion réussie 🎉");
-        router.push("/"); // redirection client
-      } else {
-        // === Responsable ===
-        localStorage.setItem(
-          "Responsable_role",
-          data.user.Responsable_role || "responsable"
-        );
-        localStorage.setItem("responsableId", data.user.id.toString());
-        localStorage.setItem(
-          "Responsable_nom",
-          data.user.Responsable_nom || ""
-        );
-        localStorage.setItem(
-          "Responsable_prenom",
-          data.user.Responsable_prenom || ""
-        );
-        toast.success("Connexion réussie 🎉");
-        router.push("/"); // redirection Responsable
-      }
+      setMessage({
+        text: data.message || "Code envoyé à votre email",
+        type: "success",
+      });
+      setStep("otp");
     } catch (err) {
-      console.error(err);
-      setError("Une erreur est survenue.");
+      setMessage({ text: "Erreur de connexion au serveur", type: "error" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    setMessage(null);
+    setIsLoading(true);
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/responsable/verify-otp/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setMessage({ text: data.error || "Code OTP invalide", type: "error" });
+        return;
+      }
+
+      localStorage.setItem("token", data.token);
+      setMessage({ text: "Connexion réussie !", type: "success" });
+      window.location.href = "/";
+    } catch (err) {
+      setMessage({ text: "Erreur de vérification OTP", type: "error" });
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-400/60 to-blue-600/90  p-4">
-      <div className="flex flex-col md:flex-row w-200 max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-400/60 to-blue-600/90 p-4">
+      <div className="flex flex-col md:flex-row w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
         {/* Image à gauche */}
         <div className="relative w-full md:w-[50%] h-64 md:h-auto flex items-center justify-center overflow-hidden">
           <img
@@ -115,86 +109,112 @@ export default function SignIn() {
         </div>
 
         {/* Formulaire à droite */}
-        <div className="w-full md:w-[50%] p-4 lg:p-6">
-          <h2 className="text-2xl lg:text-2xl font-bold text-blue-600 mb-2 text-center">
+        <div className="w-full md:w-[50%] p-6">
+          <h2 className="text-2xl font-bold text-blue-600 mb-2 text-center">
             CONNEXION
           </h2>
-          <h6 className="text-center mb-2 text-gray-600 font-medium">
+          <h6 className="text-center mb-4 text-gray-600 font-medium">
             Accédez à votre compte
           </h6>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <p className="text-red-600 text-center">{error}</p>}
 
-            {/* Email ou Nom */}
-            <div>
-              <label htmlFor="email" className="block mb-1 font-medium">
+          {step === "login" && (
+            <div className="space-y-4">
+              <label htmlFor="email" className="sr-only">
                 Email
               </label>
-              <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <EnvelopeIcon className="h-5 w-5" />
-                </span>
-                <input
-                  name="email"
-                  type="text"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Votre email ou nom"
-                  className="w-full border pl-10 pr-3 py-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  required
-                />
-              </div>
-            </div>
+              <input
+                id="email"
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+                disabled={isLoading}
+              />
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block mb-1 font-medium">
-                Mot de passe
-              </label>
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">
-                  <LockClosedIcon className="h-5 w-5" />
-                </span>
+                <label htmlFor="password" className="sr-only">
+                  Mot de passe
+                </label>
                 <input
-                  name="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={handleChange}
+                  id="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Mot de passe"
-                  className="w-full border pl-10 pr-3 py-3 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600 pr-10"
+                  disabled={isLoading}
                 />
+                <span
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </span>
               </div>
+
+              <button
+                onClick={handleLogin}
+                disabled={isLoading}
+                className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isLoading ? "Connexion..." : "Se connecter"}
+              </button>
             </div>
+          )}
 
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-3 cursor-pointer rounded-md hover:bg-blue-700 disabled:opacity-50"
+          {step === "otp" && (
+            <div className="space-y-4">
+              <p className="text-center text-gray-700">
+                Un code a été envoyé à votre email
+              </p>
+              <input
+                ref={otpInputRef}
+                type="text"
+                placeholder="Code OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-green-600 text-center tracking-widest"
+              />
+              <button
+                onClick={handleVerifyOTP}
+                disabled={isLoading}
+                className="w-full bg-green-500 text-white py-3 rounded-md hover:bg-green-600 disabled:opacity-50"
+              >
+                {isLoading ? "Vérification..." : "Vérifier OTP"}
+              </button>
+            </div>
+          )}
+
+          {message && (
+            <p
+              className={`mt-4 text-center ${
+                message.type === "error" ? "text-red-500" : "text-green-500"
+              }`}
             >
-              {isLoading ? "Connexion..." : "Se connecter"}
-            </button>
-          </form>
+              {message.text}
+            </p>
+          )}
 
-          {/* Liens */}
           <div className="mt-6 text-center text-sm text-gray-600">
             <p className="mb-2">
               Vous n’avez pas de compte ?{" "}
-              <Link
-                href="/sign-up"
-                className="text-blue-600 hover:underline font-medium cursor-pointer"
-              >
+              <a href="/sign-up" className="text-blue-600 hover:underline">
                 Créer un compte
-              </Link>
+              </a>
             </p>
             <p>
-              <Link
+              <a
                 href="/forgot-password"
-                className="text-blue-600 hover:underline font-medium cursor-pointer"
+                className="text-blue-600 hover:underline"
               >
                 Mot de passe oublié ?
-              </Link>
+              </a>
             </p>
           </div>
         </div>

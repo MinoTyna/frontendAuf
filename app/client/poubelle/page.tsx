@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-html-link-for-pages */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
@@ -7,14 +6,14 @@ import { Search } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast, { Toaster } from "react-hot-toast";
 import { FiUserPlus } from "react-icons/fi";
-import Layout from "../../components/layout/Layouts";
-import Tableau from "../../components/Tableaux";
-import ClientCardMobile from "../../components/ClientCardMobile";
+import Layout from "../../../components/layout/Layouts";
+import Tableau from "../../../components/Tableaux";
+import ClientCardMobile from "../../../components/ClientCardMobile";
 import { useRouter } from "next/navigation";
-import UpdateClientModal from "./UpdateClientModal";
+import UpdateClientModal from ".././UpdateClientModal";
 import { jwtDecode } from "jwt-decode";
 import { FaPlus, FaSearch, FaTrash } from "react-icons/fa";
-import LoadingOverlayAnimatedCircle from "../../components/LoadingOverlayCircle";
+import LoadingOverlayAnimatedCircle from "../../../components/LoadingOverlayCircle";
 type DecodedToken = {
   sub: string; // id
   email: string;
@@ -270,25 +269,26 @@ export default function ClientPage() {
     setDeleteSuccess(false);
 
     fetch(
-      `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/desactive/${selectedClient.id}`,
+      `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/active/${selectedClient.id}`,
       {
-        method: "DELETE",
+        method: "PUT",
       }
     )
       .then((res) => {
         if (res.ok) {
+          // Met à jour la liste en mettant is_active à true
           setClients((prev) =>
             prev.map((client) =>
               client.id === selectedClient.id
-                ? { ...client, is_active: false }
+                ? { ...client, is_active: true }
                 : client
             )
           );
 
           setDeleteSuccess(true); // afficher le check vert
-          toast.success("Client supprimé avec succès !");
+          toast.success("Client réactivé avec succès !");
         } else {
-          toast.error("Erreur lors de la suppression.");
+          toast.error("Erreur lors de la réactivation.");
         }
       })
       .catch((err) => {
@@ -296,7 +296,6 @@ export default function ClientPage() {
         toast.error("Erreur réseau !");
       })
       .finally(() => {
-        // cacher l'overlay après 1-1.5s pour voir le check
         setTimeout(() => {
           setDeleting(false);
           setDeleteSuccess(false);
@@ -306,17 +305,19 @@ export default function ClientPage() {
       });
   };
 
-  const filteredClients = clients.filter((client) => {
-    if (client.is_active === false) return false;
-    const query = search.toLowerCase();
-    return (
-      client.Client_nom?.toLowerCase().includes(query) ||
-      client.Client_prenom?.toLowerCase().includes(query) ||
-      client.Client_cin?.toLowerCase().includes(query) ||
-      client.Client_telephone?.toLowerCase().includes(query) ||
-      client.Client_adresse?.toLowerCase().includes(query)
-    );
-  });
+  const filteredClients = clients
+    .filter((client) => client.is_active === false) // <-- clients désactivés seulement
+    .filter((client) => {
+      const query = search.toLowerCase();
+      return (
+        client.Client_nom?.toLowerCase().includes(query) ||
+        client.Client_prenom?.toLowerCase().includes(query) ||
+        client.Client_cin?.toLowerCase().includes(query) ||
+        client.Client_telephone?.toLowerCase().includes(query) ||
+        client.Client_adresse?.toLowerCase().includes(query)
+      );
+    });
+
   const router = useRouter();
   const [choix, setChoix] = useState("client");
 
@@ -355,24 +356,6 @@ export default function ClientPage() {
             </div>
 
             {/* Bouton ajouter avec icône et tooltip */}
-            <button
-              className="bg-blue-500 hover:bg-blue-700 text-white px-4 py-2 cursor-pointer rounded-lg relative group"
-              onClick={() => setShowAddModal(true)}
-            >
-              <FaPlus />
-              <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                Ajouter
-              </span>
-            </button>
-            <a
-              href="/client/poubelle"
-              className="bg-red-500 hover:bg-red-700 text-white px-4 py-2 cursor-pointer rounded-lg relative group flex items-center gap-2"
-            >
-              <FaTrash />
-              <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                Clients désactivés
-              </span>
-            </a>
           </div>
         </div>
 
@@ -395,10 +378,6 @@ export default function ClientPage() {
                   ]}
                   rows={filteredClients}
                   {...(role === "admin" && {
-                    onEdit: (user) => {
-                      setSelectedClient(user);
-                      setShowUpdateModal(true);
-                    },
                     onDelete: (user) => {
                       setSelectedClient(user);
                       setShowModal(true);
@@ -456,20 +435,20 @@ export default function ClientPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <p className="text-1xl text-gray-700  mb-5 text-center">
-              Êtes-vous sûr de vouloir supprimer ce client ?
+              Êtes-vous sûr de vouloir active ce client ?
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-3">
               <button
                 onClick={() => setShowModal(false)}
                 className="w-full sm:w-auto px-4 py-2 bg-gray-300 cursor-pointer text-gray-800 rounded hover:bg-gray-400"
               >
-                Annuler
+                non
               </button>
               <button
                 onClick={handleConfirmDelete}
                 className="w-full sm:w-auto px-4 py-2 bg-red-600 cursor-pointer text-white rounded hover:bg-red-700"
               >
-                Supprimer
+                oui
               </button>
             </div>
           </div>

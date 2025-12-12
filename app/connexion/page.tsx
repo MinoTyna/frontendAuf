@@ -1,80 +1,106 @@
-/* eslint-disable @next/next/no-img-element */
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @next/next/no-html-link-for-pages */
 "use client";
-import { useState } from "react";
+
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import toast from "react-hot-toast";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
 
 export default function SignInClient() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
-    email: "",
-    fullName: "",
-    password: "",
-  });
+  const [step, setStep] = useState<"login" | "otp">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState<{
+    text: string;
+    type: "error" | "success";
+  } | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const otpInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Focus sur l'input OTP lorsqu'on passe à cette étape
+  useEffect(() => {
+    if (step === "otp" && otpInputRef.current) {
+      otpInputRef.current.focus();
+    }
+  }, [step]);
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) {
+      toast.error("Email et mot de passe sont requis");
+      return;
+    }
     setIsLoading(true);
+    setMessage(null);
 
     try {
-      const url = "/client/connexion";
-      const body: any = { password: formData.password };
-
-      if (formData.email) {
-        body.Client_email = formData.email.trim();
-      } else if (formData.fullName) {
-        // Séparer nom et prénom
-        const [nom, ...prenomParts] = formData.fullName.trim().split(" ");
-        body.Client_nom = nom;
-        body.Client_prenom = prenomParts.join(" ") || "";
-      } else {
-        toast.error("Veuillez saisir l'email ou le nom complet");
-        setIsLoading(false);
-        return;
-      }
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}${url}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/connexion`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ Client_email: email.trim(), password }),
+        }
+      );
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Erreur de connexion");
 
-      if (!res.ok) {
-        toast.error(data.error || "Identifiants invalides");
-        setIsLoading(false);
-        return;
-      }
+      toast.success(data.message);
+      setStep("otp");
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      // Stockage token et infos utilisateur
+  const handleVerifyOTP = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!otp) {
+      toast.error("Veuillez entrer le code OTP");
+      return;
+    }
+    setIsLoading(true);
+    setMessage(null);
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/verify-otp/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "OTP invalide");
+
+      // Stocker token + infos client
       localStorage.setItem("token", data.token);
       localStorage.setItem("Client_role", data.user.Client_role);
       localStorage.setItem("clientId", data.user.id.toString());
       localStorage.setItem("Client_nom", data.user.Client_nom);
       localStorage.setItem("Client_prenom", data.user.Client_prenom || "");
 
-      toast.success("Connexion réussie 🎉");
+      toast.success(data.message);
       router.push("/");
     } catch (err) {
-      console.error("Erreur attrapée:", err);
-      toast.error("Une erreur est survenue.");
+      toast.error((err as Error).message);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-400/40 to-blue-600/90 p-4">
-      <div className="flex flex-col md:flex-row w-200 max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* Image à gauche */}
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-red-400/60 to-blue-600/90 p-4">
+      <div className="flex flex-col md:flex-row w-full max-w-5xl bg-white rounded-xl shadow-lg overflow-hidden">
+        {/* Image gauche */}
         <div className="relative w-full md:w-[50%] h-64 md:h-auto flex items-center justify-center overflow-hidden">
           <img
             src="/images.jpeg"
@@ -88,68 +114,103 @@ export default function SignInClient() {
           </div>
         </div>
 
-        {/* Formulaire à droite */}
-        <div className="w-full md:w-[50%] p-4 lg:p-6">
-          <h2 className="text-2xl lg:text-2xl font-bold text-blue-600 mb-2 text-center">
+        {/* Formulaire droit */}
+        <div className="w-full md:w-[50%] p-6">
+          <h2 className="text-2xl font-bold text-blue-600 mb-2 text-center">
             CONNEXION
           </h2>
-          <h6 className="text-center mb-2 text-gray-600 font-medium">
+          <h6 className="text-center mb-4 text-gray-600 font-medium">
             Accédez à votre compte
           </h6>
-          <form onSubmit={handleSubmit}>
-            <input
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Email (optionnel)"
-              className="w-full border p-2 mb-2 rounded"
-            />
 
-            <input
-              name="fullName"
-              value={formData.fullName}
-              onChange={handleChange}
-              placeholder="Nom et prénom (si pas d'email)"
-              className="w-full border p-2 mb-2 rounded"
-            />
+          {step === "login" && (
+            <form className="space-y-4" onSubmit={handleLogin}>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+                disabled={isLoading}
+              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Mot de passe"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-blue-600 pr-10"
+                  disabled={isLoading}
+                />
+                <span
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 cursor-pointer"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
+                </span>
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-blue-600 text-white py-3 rounded-md hover:bg-blue-700 disabled:opacity-50"
+              >
+                {isLoading ? "Connexion..." : "Se connecter"}
+              </button>
+            </form>
+          )}
 
-            <input
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Mot de passe"
-              className="w-full border p-2 mb-4 rounded"
-              required
-            />
+          {step === "otp" && (
+            <form className="space-y-4" onSubmit={handleVerifyOTP}>
+              <p className="text-center text-gray-700">
+                Un code a été envoyé à votre email
+              </p>
+              <input
+                ref={otpInputRef}
+                type="text"
+                placeholder="Code OTP"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                maxLength={6}
+                className="w-full p-3 border rounded focus:outline-none focus:ring-2 focus:ring-green-600 text-center tracking-widest"
+              />
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-green-500 text-white py-3 rounded-md hover:bg-green-600 disabled:opacity-50"
+              >
+                {isLoading ? "Vérification..." : "Vérifier OTP"}
+              </button>
+            </form>
+          )}
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+          {message && (
+            <p
+              className={`mt-4 text-center ${
+                message.type === "error" ? "text-red-500" : "text-green-500"
+              }`}
             >
-              {isLoading ? "Connexion..." : "Se connecter"}
-            </button>
-          </form>
+              {message.text}
+            </p>
+          )}
 
-          {/* Liens */}
           <div className="mt-6 text-center text-sm text-gray-600">
             <p className="mb-2">
               Vous n’avez pas de compte ?{" "}
-              <Link
-                href="/sign-up"
-                className="text-blue-600 hover:underline font-medium"
-              >
+              <a href="/registre" className="text-blue-600 hover:underline">
                 Créer un compte
-              </Link>
+              </a>
             </p>
             <p>
-              <Link
-                href="/forgot-password"
-                className="text-blue-600 hover:underline font-medium"
+              <a
+                href="/forgot-password/client"
+                className="text-blue-600 hover:underline"
               >
                 Mot de passe oublié ?
-              </Link>
+              </a>
             </p>
           </div>
         </div>

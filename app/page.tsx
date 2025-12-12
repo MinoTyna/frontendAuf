@@ -228,7 +228,7 @@ export default function Dashboard() {
   return (
     <div className="w-full bg-gradient-to-br from-red-400/50 to-blue-600/90 min-h-screen flex items-start justify-center">
       {/* Contenu intérieur centré avec padding adaptatif */}
-      <div className="bg-white rounded-2xl w-full max-w-screen-xl min-h-screen p-4 m-6 sm:p-6 md:p-8 lg:p-10">
+      <div className="bg-white rounded-2xl w-full max-w-screen min-h-screen p-4 m-6 sm:p-6 md:p-8 lg:p-10">
         <div className="space-y-6">
           {/* Stat Cards */}
           <div className={`grid gap-4 ${gridColsClass}`}>

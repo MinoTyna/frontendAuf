@@ -256,37 +256,41 @@ export default function DetailClientPage() {
     if (!clientId) return toast.error("Client invalide.");
 
     const montantNumber = parseFloat(montant);
-    if (!montantNumber || montantNumber < 100000)
+    if (!montantNumber || montantNumber < 10)
       return toast.error("Montant invalide (min 100 000 Ar).");
 
-    if (modePaiement !== "Orange")
-      return toast.error("Pour l'instant seul Orange Money est supporté.");
+    if (!modePaiement)
+      return toast.error("Veuillez choisir un mode de paiement.");
 
     try {
       setIsPaying(true);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/paiement/api/payment/init/`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/paiement/repaiement`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            amount: montantNumber.toFixed(0),
-            phone: client?.telephone, // ⚠️ IMPORTANT pour Orange Money
-            client: clientId,
+            client: clientId, // ⚠️ identifiant client
+            montant: montantNumber.toFixed(0), // ⚠️ correspond à Paiement_montant
+            Paiement_mode: modePaiement.toLowerCase(), // ⚠️ orange / mvola / airtel
+            Paiement_type: "mensuel", // ou "mensuel" si paiement mensuel
           }),
         }
       );
 
       const data = await res.json();
 
-      if (!data.payment_url) {
-        setIsPaying(false);
-        return toast.error("Erreur API Orange Money.");
+      if (!res.ok) {
+        return toast.error(data.error || "Erreur lors du paiement.");
       }
 
-      // 🟩 Redirection vers l'interface officielle OM WebPay
-      window.location.href = data.payment_url;
+      // 🔹 Redirection si Orange Money
+      if (data.payment_url) {
+        window.location.href = data.payment_url;
+      } else {
+        toast.success("Paiement enregistré avec succès !");
+      }
     } catch (error) {
       console.log(error);
       toast.error("Erreur réseau.");
@@ -690,7 +694,7 @@ export default function DetailClientPage() {
             >
               ×
             </button>
-            <OMPayButton />
+            {/* <OMPayButton montant={montant} /> */}
 
             {/* Mode paiement avec images */}
             <div className="mb-4">
@@ -699,7 +703,7 @@ export default function DetailClientPage() {
                 {[
                   { name: "Mvola", img: "/yas.jpg" },
                   { name: "Airtel", img: "/airtel.jpg" },
-                  { name: "Orange", img: "/orange.jpg" },
+                  { name: "Orange", img: "/170421 logo_payer_OM-03_OK.JPG" },
                 ].map((mode) => (
                   <div
                     key={mode.name}

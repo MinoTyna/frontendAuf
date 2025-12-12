@@ -87,7 +87,7 @@ export function History() {
       : products.filter((p) => p.category === selectedCategory);
 
   return (
-    <section id="historique" className="py-2 bg-background">
+    <section id="historique" className=" bg-background">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-blue-950 mb-8">
           Nos Produits

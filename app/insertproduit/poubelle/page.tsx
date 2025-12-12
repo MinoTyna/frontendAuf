@@ -1,25 +1,24 @@
-/* eslint-disable @next/next/no-html-link-for-pages */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 
 import { useEffect, useState } from "react";
-import Layout from "../../components/layout/Layouts";
-import Tableau from "../../components/Tableau";
-import ProduitCardMobile from "../../components/ProduitCardMobile";
-import LoadingOverlayAnimatedCircle from "../../components/LoadingOverlayCircle";
+import Layout from "../../../components/layout/Layouts";
+import Tableau from "../../../components/Tableau";
+import ProduitCardMobile from "../../../components/ProduitCardMobile";
+import LoadingOverlayAnimatedCircle from "../../../components/LoadingOverlayCircle";
 
 import { Search } from "lucide-react";
 import toast from "react-hot-toast";
-import UpdateProduitModal from "./UpdateProduitModal";
-import ProduitGrid from "../../components/ProduitGrid";
-import { FaSearch, FaPlus, FaTrash } from "react-icons/fa"; // ou autre selon ta préférence
+import UpdateProduitModal from ".././UpdateProduitModal";
+import ProduitGrid from "../../../components/ProduitGrid";
+import { FaSearch, FaPlus } from "react-icons/fa"; // ou autre selon ta préférence
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
+} from "../../../components/ui/card";
 import { jwtDecode } from "jwt-decode";
 
 import {
@@ -28,7 +27,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../../components/ui/select";
+} from "../../../components/ui/select";
 import { useRouter } from "next/navigation";
 
 type Gestion = {
@@ -281,8 +280,8 @@ export default function ProduitInsertPage() {
 
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/produit/delete/${selectedProduit.id}`,
-        { method: "DELETE" }
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/produit/active/${selectedProduit.id}/`, // <- slash ici
+        { method: "PUT" }
       );
 
       if (!res.ok) throw new Error("Erreur lors de la suppression");
@@ -306,7 +305,7 @@ export default function ProduitInsertPage() {
   // === Filtrage ===
   const filteredProduits = produits.filter(
     (p) =>
-      p.is_active !== false && // filtrer uniquement les produits actifs
+      p.is_active !== true && // filtrer uniquement les produits actifs
       p.Produit_nom.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -343,15 +342,6 @@ export default function ProduitInsertPage() {
                 Ajouter
               </span>
             </button>
-            <a
-              href="/insertproduit/poubelle"
-              className="bg-red-500 hover:bg-red-700 text-white px-4 py-2 cursor-pointer rounded-lg relative group flex items-center gap-2"
-            >
-              <FaTrash />
-              <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-black text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                Produit désactivés
-              </span>
-            </a>
           </div>
         </div>
 

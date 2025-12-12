@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FiEdit, FiTrash2, FiChevronDown, FiChevronUp } from "react-icons/fi";
 import { useState } from "react";
 import LoadingSpinner from "./LoadingSpinner";
+import { FaCheck } from "react-icons/fa";
 
 interface TableauProps {
   headers: string[];
@@ -128,7 +129,7 @@ const Tableau: React.FC<TableauProps> = ({
                         <img
                           src={photoUrl}
                           alt={`${row.Client_nom} ${row.Client_prenom}`}
-                          className="w-12 h-12 object-cover mx-auto rounded-full border bg-gray-200"
+                          className="w-10 h-10 object-cover mx-auto rounded-full border bg-gray-200"
                           onError={(e) => {
                             (e.currentTarget as HTMLImageElement).src =
                               "/images.jpg";
@@ -160,29 +161,40 @@ const Tableau: React.FC<TableauProps> = ({
                 </td>
               ))}
               {showActions && (onEdit || onDelete) && (
-                <td className="px-4 py-2 text-center space-x-2">
+                <td className="px-4 py-2 text-center space-x-2 flex justify-center items-center">
+                  {/* Bouton modifier */}
                   {onEdit && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onEdit(row);
                       }}
-                      className="text-blue-600 hover:text-blue-800 cursor-pointer"
+                      className="bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer p-2 rounded transition-colors"
                       title="Modifier"
                     >
                       <FiEdit size={18} />
                     </button>
                   )}
+
+                  {/* Bouton activer / désactiver */}
                   {onDelete && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
                         onDelete(row);
                       }}
-                      className="text-red-600 hover:text-red-800 cursor-pointer"
-                      title="Supprimer"
+                      className={`cursor-pointer p-2 rounded transition-colors ${
+                        row.is_active
+                          ? "bg-red-100 text-red-600 hover:bg-red-200"
+                          : "bg-green-100 text-green-600 hover:bg-green-200"
+                      }`}
+                      title={row.is_active ? "Désactiver" : "Réactiver"}
                     >
-                      <FiTrash2 size={18} />
+                      {row.is_active ? (
+                        <FiTrash2 size={18} />
+                      ) : (
+                        <FaCheck size={18} />
+                      )}
                     </button>
                   )}
                 </td>

@@ -55,7 +55,12 @@ const ProduitGrid: React.FC<ProduitGridProps> = ({
         {paginatedRows.map((produit, index) => (
           <div
             key={index}
-            className="border rounded-xl shadow bg-white flex flex-col transition-transform hover:-translate-y-2 hover:shadow-lg duration-300"
+            className={`rounded-xl shadow flex flex-col transition-transform hover:-translate-y-2 hover:shadow-lg duration-300 border ${
+              produit.Produit_quantite !== undefined &&
+              produit.Produit_quantite < 3
+                ? "border-4 border-red-600 bg-red-50" // bordure plus épaisse + fond rouge clair
+                : "border-gray-300 bg-white"
+            }`}
             style={{ aspectRatio: "3 / 2" }}
           >
             <div className="relative w-full h-50 overflow-hidden rounded-t-xl bg-gray-100">

@@ -2,9 +2,9 @@
 
 export function About() {
   return (
-    <section id="a-propos" className="py-6">
+    <section id="a-propos" className="py-2 bg-background scroll-mt-32">
       <div className="container mx-auto px-4">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-full mx-auto">
           <h2 className="text-3xl md:text-4xl font-bold text-center text-blue-950 mb-12">
             À Propos d'AUF-SARL
           </h2>

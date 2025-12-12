@@ -24,8 +24,8 @@ type Notification = {
   produit_nom?: string;
   produits?: Produit[];
   message: string;
-  vue: boolean; // côté admin
-  vue_client: boolean; // côté client
+  vue: boolean;
+  vue_client: boolean;
   created_at: string;
   url?: string;
 };
@@ -33,8 +33,9 @@ type Notification = {
 export default function Commande() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showConfirmId, setShowConfirmId] = useState<number | null>(null); // ✅ modal spécifique à une notif
-  const [confirmingIds, setConfirmingIds] = useState<number[]>([]); // ✅ suivi des notifs déjà confirmées
+  const [showConfirmId, setShowConfirmId] = useState<number | null>(null);
+  const [confirmingIds, setConfirmingIds] = useState<number[]>([]);
+  const [search, setSearch] = useState(""); // ✅ recherche client
 
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -79,7 +80,6 @@ export default function Commande() {
   };
 
   const handleConfirmClick = async (notifId: number) => {
-    // ✅ mise à jour immédiate de l'état
     setConfirmingIds((prev) => [...prev, notifId]);
     setShowConfirmId(null);
     try {
@@ -89,14 +89,36 @@ export default function Commande() {
     }
   };
 
+  // 🔍 Filtrage des notifications selon le nom/prénom
+  const filteredNotifications = notifications.filter((n) =>
+    `${n.client.nom} ${n.client.prenom}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
+
   return (
     <div className="h-full flex flex-col gap-6 bg-gradient-to-br from-red-400/50 to-blue-600/90 p-6">
+      {/* ⭐ TITRE + BARRE DE RECHERCHE */}
+      <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-4">
+        <h1 className="text-2xl font-bold text-white drop-shadow">
+          Liste des commandes
+        </h1>
+
+        <input
+          type="text"
+          placeholder="Recherche client..."
+          className="px-3 py-1.5 rounded-md shadow bg-white w-100 text-sm text-gray-700"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
       {loading ? (
         <div className="flex items-center justify-center h-screen bg-gradient-to-br">
           <LoadingSpinner />
         </div>
-      ) : notifications.length === 0 ? (
-        <p>Aucune notification pour le moment.</p>
+      ) : filteredNotifications.length === 0 ? (
+        <p className="text-white text-lg">Aucun résultat.</p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white rounded-lg shadow">
@@ -109,7 +131,7 @@ export default function Commande() {
               </tr>
             </thead>
             <tbody>
-              {notifications.map((notif) => {
+              {filteredNotifications.map((notif) => {
                 const isConfirmed =
                   confirmingIds.includes(notif.id) || notif.vue_client;
 
@@ -120,7 +142,7 @@ export default function Commande() {
                     </td>
 
                     <td className="py-2 px-4 border text-center">
-                      {notif.produits && notif.produits.length > 0 ? (
+                      {notif.produits?.length ? (
                         <ul className="list-disc list-inside text-left">
                           {notif.produits.map((p) => (
                             <li key={p.id}>
@@ -166,7 +188,7 @@ export default function Commande() {
                         </span>
                       )}
 
-                      {/* ✅ Modal spécifique à la notif */}
+                      {/* MODAL */}
                       {showConfirmId === notif.id && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                           <div className="bg-white rounded-xl shadow-lg p-6 w-120 text-center">

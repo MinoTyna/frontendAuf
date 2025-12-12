@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/responsable/responsable/forgot-password/`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/client/forgot-password/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/responsable/responsable/verify-otp/`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/client/verify-otp/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/responsable/responsable/reset-password/`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/client/reset-password/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
       if (!res.ok)
         throw new Error(data.error || "Erreur lors de la réinitialisation");
       toast.success("Mot de passe réinitialisé avec succès !");
-      router.push("/sign-in");
+      router.push("/connexion");
     } catch (err) {
       toast.error((err as Error).message);
     } finally {

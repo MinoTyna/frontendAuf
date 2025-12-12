@@ -87,13 +87,14 @@ export function Products() {
 
   const categories = ["Tous", ...Object.keys(categoryLabels)];
 
-  const filteredProducts =
+  const filteredProducts = (
     selectedCategory === "Tous"
       ? products
-      : products.filter((p) => p.Produit_categorie === selectedCategory);
+      : products.filter((p) => p.Produit_categorie === selectedCategory)
+  ).filter((p) => p.Produit_quantite > 1);
 
   return (
-    <section id="produits" className="py-2 bg-background">
+    <section id="produits" className="py-2 bg-background scroll-mt-32">
       <div className="container mx-auto px-4">
         <h2 className="text-3xl md:text-4xl font-bold text-center text-blue-950 mb-8">
           Nos Produits
@@ -146,7 +147,6 @@ export function Products() {
                     </div>
                   )}
                 </div>
-            
 
                 <CardContent className="flex-1 flex flex-col justify-between">
                   <div className="mt-2">

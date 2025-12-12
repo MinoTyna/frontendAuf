@@ -5,13 +5,25 @@
 
 "use client";
 import { useEffect, useState, useRef } from "react";
-import { Bell, CreditCard, LogOut, ShoppingCart, User, X } from "lucide-react";
+import {
+  Bell,
+  CreditCard,
+  Home,
+  LogOut,
+  Phone,
+  ShoppingBag,
+  ShoppingCart,
+  Target,
+  User,
+  X,
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable"; // ✅ correction ici
 import OMPayButton from "../app/produit/page";
+import { FaSignInAlt, FaUserPlus } from "react-icons/fa";
 
 type Client = {
   id: number;
@@ -94,6 +106,34 @@ export function Header() {
   const [openPanier, setOpenPanier] = useState(false);
   const [moisChoisi, setMoisChoisi] = useState(2); // valeur par défaut 2 mois
   const [loading, setLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState("accueil");
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const sections = ["accueil", "produits", "a-propos", "contact"];
+
+    const handleScroll = () => {
+      let currentSection = "accueil";
+
+      for (const section of sections) {
+        const element = document.getElementById(section);
+        if (element) {
+          const rect = element.getBoundingClientRect();
+
+          // Section visible à l'écran ?
+          if (rect.top <= 150 && rect.bottom >= 150) {
+            currentSection = section;
+            break;
+          }
+        }
+      }
+
+      setActiveSection(currentSection);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   // Refs pour dropdown et notifications
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -429,14 +469,18 @@ export function Header() {
       toast.error("Aucun client sélectionné.");
       return;
     }
-    if (!montant || Number(montant) <= 0) {
+
+    const montantNumber = Number(montant);
+    if (!montantNumber || montantNumber <= 0) {
       toast.error("Montant total invalide.");
       return;
     }
+
     if (typePaiement === "mensuel" && !datePaiementChoisi) {
       toast.error("Veuillez choisir la date du premier paiement.");
       return;
     }
+
     if (achatIds.length === 0) {
       toast.error("Aucun achat sélectionné.");
       return;
@@ -444,19 +488,23 @@ export function Header() {
 
     setIsPaying(true);
 
+    // Calcul du montant mensuel si applicable
     const montantParMois =
-      typePaiement === "mensuel" ? Math.ceil(Number(montant) / moisChoisi) : 0;
+      typePaiement === "mensuel" ? Math.ceil(montantNumber / moisChoisi) : null;
 
-    const payload = {
-      idachat: achatIds[0],
-      numero_client: selectedClient.numero || selectedClient.Client_telephone,
-      montant: Number(montant),
-      mode: modePaiement,
+    // 🔹 Payload corrigé : envoyer "client" et non "numero_client"
+    const payload: any = {
+      client: selectedClient.id, // ID du client
+      montant: montantNumber,
+      Paiement_mode: "orange", // Orange Money
       Paiement_type: typePaiement,
-      Paiement_montantchoisi: montantParMois,
-      Paiement_datechoisi:
-        typePaiement === "mensuel" ? datePaiementChoisi : null,
+      id_responsable: 1, // ID responsable fixe
     };
+
+    if (typePaiement === "mensuel") {
+      payload.Paiement_datechoisi = datePaiementChoisi; // format "YYYY-MM-DD"
+      payload.Paiement_montantchoisi = montantParMois;
+    }
 
     try {
       const res = await fetch(
@@ -478,16 +526,21 @@ export function Header() {
       const data = await res.json();
       console.log("Réponse backend :", data);
 
-      toast.success("Paiement effectué avec succès !");
+      // Redirection vers Orange Money WebPay si payment_url présent
+      if (data.payment_url) {
+        window.location.href = data.payment_url;
+        return;
+      }
 
+      toast.success("Paiement enregistré avec succès !");
       setShowPaiementModal(false);
       setMontant("");
       setDatePaiementChoisi("");
-      setModePaiement("mvola");
+      setModePaiement("orange");
       setAchatIds([]);
     } catch (error) {
-      toast.error("Erreur réseau");
       console.error("Erreur réseau paiement :", error);
+      toast.error("Erreur réseau lors du paiement");
     } finally {
       setIsPaying(false);
     }
@@ -496,11 +549,11 @@ export function Header() {
   return (
     <>
       {/* Header */}
-      <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-50">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between w-full">
+      <nav className="fixed top-0 left-0 w-full bg-white shadow-md z-40">
+        <div className="max-w-7xl mx-auto px-6 py-1 flex items-center justify-between w-full">
           {/* Logo */}
           <div className="flex items-center space-x-2">
-            <a href="/" aria-label="AUF-SARL Logo">
+            <a href="/sign-in" aria-label="AUF-SARL Logo">
               <img
                 src="/logo.jpeg"
                 alt="AUF-SARL"
@@ -510,30 +563,57 @@ export function Header() {
             <span className="font-bold text-lg text-gray-800">AUF-SARL</span>
           </div>
           {/* Menu */}
+          {/* Menu */}
           <div className="hidden md:flex space-x-6 text-sm font-medium">
             <a
               href="#accueil"
-              className="hover:text-white hover:bg-blue-900 p-2 rounded-2xl transition"
+              onClick={() => setActiveSection("accueil")}
+              className={`p-2 flex items-center gap-2 transition ${
+                activeSection === "accueil"
+                  ? "text-orange-500 underline underline-offset-4 font-bold"
+                  : "hover:text-orange-500"
+              }`}
             >
+              <Home size={18} />
               Accueil
             </a>
+
             <a
               href="#produits"
-              className="hover:text-white hover:bg-blue-900 p-2 rounded-2xl transition"
+              onClick={() => setActiveSection("produits")}
+              className={`p-2 flex items-center gap-2 transition ${
+                activeSection === "produits"
+                  ? "text-orange-500 underline underline-offset-4 font-bold"
+                  : "hover:text-orange-500"
+              }`}
             >
+              <ShoppingBag size={18} />
               Produits
             </a>
+
             <a
               href="#a-propos"
-              className="hover:text-white hover:bg-blue-900 p-2 rounded-2xl transition"
+              onClick={() => setActiveSection("a-propos")}
+              className={`p-2 flex items-center gap-2 transition ${
+                activeSection === "a-propos"
+                  ? "text-orange-500 underline underline-offset-4 font-bold"
+                  : "hover:text-orange-500"
+              }`}
             >
-              Mission
+              <Target size={18} />À propos
             </a>
+
             <a
               href="#contact"
-              className="hover:text-white hover:bg-blue-900 p-2 rounded-2xl transition"
+              onClick={() => setActiveSection("contact")}
+              className={`p-2 flex items-center gap-2 transition ${
+                activeSection === "contact"
+                  ? "text-orange-500 underline underline-offset-4 font-bold"
+                  : "hover:text-orange-500"
+              }`}
             >
-              Contact
+              <Phone size={18} />
+              Nos Contacts
             </a>
           </div>
 
@@ -603,7 +683,7 @@ export function Header() {
                       </a>
                       <button
                         onClick={handleLogout}
-                        className="flex items-center gap-2 w-full text-left px-4 py-2 text-orange-600 hover:bg-orange-500 hover:text-white transition-colors"
+                        className="flex items-center cursor-pointer gap-2 w-full text-left px-4 py-2 text-orange-600 hover:bg-orange-500 hover:text-white transition-colors"
                       >
                         <LogOut className="w-4 h-4" />
                         Déconnexion
@@ -615,16 +695,16 @@ export function Header() {
             ) : (
               <>
                 <a
-                  href="/sign-in"
-                  className="px-4 py-2 border text-gray-800 rounded-lg hover:bg-blue-950 font-bold hover:text-orange-600 transition"
+                  href="/connexion"
+                  className="px-4 py-2 border text-gray-800 rounded-lg hover:bg-blue-950 font-bold hover:text-orange-600 transition flex items-center gap-2"
                 >
-                  Connexion
+                  <FaSignInAlt /> connexion
                 </a>
                 <a
                   href="/registre"
-                  className="px-4 py-2 bg-blue-950 text-white font-bold rounded-lg hover:bg-orange-500 hover:text-white transition"
+                  className="px-4 py-2 bg-blue-950 text-white font-bold rounded-lg hover:bg-orange-500 hover:text-white transition flex items-center gap-2"
                 >
-                  Registre
+                  <FaUserPlus /> s'inscrire
                 </a>
               </>
             )}
@@ -1155,7 +1235,7 @@ export function Header() {
                 {[
                   { name: "Mvola", img: "/yas.jpg" },
                   { name: "Airtel", img: "/airtel.jpg" },
-                  { name: "Orange", img: "/orange.jpg" },
+                  { name: "Orange", img: "/170421 logo_payer_OM-03_OK.JPG" },
                 ].map((mode) => (
                   <div
                     key={mode.name}
@@ -1185,7 +1265,7 @@ export function Header() {
                 type="number"
                 value={montant}
                 onChange={(e) =>
-                  setMontant(Math.max(10000, Number(e.target.value)).toString())
+                  setMontant(Math.max(100, Number(e.target.value)).toString())
                 }
                 className="w-full border px-3 py-2 rounded"
                 placeholder="Ex: 20000"

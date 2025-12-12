@@ -41,13 +41,13 @@ export default function SignUpClient() {
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        const lat = position.coords.latitude.toString();
+        const lon = position.coords.longitude.toString();
+
+        // Si précision > 50 m, on considère que c’est approximatif
+        setLocationApprox(position.coords.accuracy > 50);
+
         try {
-          const lat = position.coords.latitude.toString();
-          const lon = position.coords.longitude.toString();
-
-          if (position.coords.accuracy > 100) setLocationApprox(true);
-          else setLocationApprox(false);
-
           const res = await fetch(
             `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`
           );
@@ -73,8 +73,35 @@ export default function SignUpClient() {
           alert("Impossible de récupérer l'adresse automatiquement.");
         }
       },
-      (err) => alert("Erreur de géolocalisation : " + err.message),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      async (err) => {
+        console.error("Erreur géolocalisation:", err);
+        // Fallback IP si GPS impossible
+        try {
+          const ipRes = await fetch("https://ipapi.co/json/");
+          const ipData = await ipRes.json();
+          setForm((prev) => ({
+            ...prev,
+            latitude: ipData.latitude?.toString() || "",
+            longitude: ipData.longitude?.toString() || "",
+            adresse: ipData.city
+              ? `${ipData.city}, ${ipData.region}, ${ipData.country_name}`
+              : prev.adresse,
+          }));
+          setLocationApprox(true);
+          alert(
+            "Localisation approximative détectée via IP. Vérifiez votre adresse."
+          );
+        } catch {
+          alert(
+            "Impossible de récupérer votre localisation. Saisissez votre adresse manuellement."
+          );
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 30000, // 30 secondes max
+        maximumAge: 0,
+      }
     );
   };
 
@@ -84,21 +111,24 @@ export default function SignUpClient() {
     setIsLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("Client_nom", form.nom);
-      formData.append("Client_prenom", form.prenom);
-      formData.append("Client_cin", form.cin);
-      formData.append("Client_email", form.email);
-      formData.append("Client_telephone", form.telephone);
-      formData.append("Client_adresse", form.adresse);
-      formData.append("password", form.password);
-      formData.append("latitude", form.latitude || "");
-      formData.append("longitude", form.longitude || "");
-      if (form.photo) formData.append("Client_photo", form.photo);
+      const formDataToSend = new FormData();
+      formDataToSend.append("Client_nom", form.nom);
+      formDataToSend.append("Client_prenom", form.prenom);
+      formDataToSend.append("Client_cin", form.cin);
+      formDataToSend.append("Client_email", form.email);
+      formDataToSend.append("Client_telephone", form.telephone);
+      formDataToSend.append("Client_adresse", form.adresse);
+      formDataToSend.append("password", form.password);
+      formDataToSend.append("latitude", form.latitude || "");
+      formDataToSend.append("longitude", form.longitude || "");
+      if (form.photo) formDataToSend.append("Client_photo", form.photo);
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/client/post`,
-        { method: "POST", body: formData }
+        {
+          method: "POST",
+          body: formDataToSend,
+        }
       );
 
       const data = await res.json();
@@ -221,11 +251,7 @@ export default function SignUpClient() {
                   required
                   className="border p-2 rounded focus:ring-2 focus:ring-blue-500 col-span-2"
                 />
-                {locationApprox && (
-                  <p className="text-sm text-orange-600 col-span-2">
-                    ⚠ Adresse approximative, veuillez vérifier.
-                  </p>
-                )}
+
                 <button
                   type="button"
                   onClick={handleGetLocation}
@@ -233,6 +259,7 @@ export default function SignUpClient() {
                 >
                   📍 Localiser mon adresse
                 </button>
+
                 <input
                   type="file"
                   accept="image/*"
@@ -276,7 +303,7 @@ export default function SignUpClient() {
           <p className="text-center text-sm text-gray-600 mt-4">
             Vous avez déjà un compte ?{" "}
             <Link
-              href="/sign-in"
+              href="/connexion"
               className="text-blue-600 hover:underline cursor-pointer"
             >
               Se connecter
